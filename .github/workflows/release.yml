@@ -1,0 +1,78 @@
+name: Build and Release
+
+on:
+  push:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: version
+        shell: bash
+        run: |
+          VERSION=$(tr -d '[:space:]' < VERSION)
+          if [[ -z "$VERSION" ]]; then
+            echo "VERSION file is empty" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag exists
+        id: tagcheck
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag already exists. Skipping build/release."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "Tag does not exist. Build/release will run."
+          fi
+
+      - name: Setup Python
+        if: steps.tagcheck.outputs.exists == 'false'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        if: steps.tagcheck.outputs.exists == 'false'
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build CLI and GUI executables
+        if: steps.tagcheck.outputs.exists == 'false'
+        run: |
+          python -m PyInstaller --noconfirm --clean --onefile --name cp77mod-cli cli_entry.py
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name cp77mod-gui gui_entry.py
+
+      - name: Create and push tag
+        if: steps.tagcheck.outputs.exists == 'false'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag "${{ steps.version.outputs.version }}"
+          git push origin "${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub release
+        if: steps.tagcheck.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          files: |
+            dist/cp77mod-cli.exe
+            dist/cp77mod-gui.exe
+          generate_release_notes: true
