@@ -42,6 +42,7 @@ CYBERPUNK_ROOTS = {"archive", "bin", "engine", "r6", "red4ext", "mods"}
 MOD_EXTS = {".archive", ".xl"}
 DOC_EXTS = {".txt", ".md", ".png", ".jpg", ".jpeg", ".pdf"}
 STATE_FILE = "mods.json"
+DEFAULT_MANAGER_WORKERS = 8
 
 print_lock = threading.Lock()
 file_write_lock = threading.Lock()
@@ -131,11 +132,19 @@ def make_install_id(item_type, item_name):
 def extract_archive(archive_path, extract_dir, logger=None):
     if os.path.exists(SEVEN_ZIP_EXE):
         try:
+            startupinfo = None
+            creationflags = 0
+            if os.name == "nt":
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
             result = subprocess.run(
                 [SEVEN_ZIP_EXE, "x", f"-o{extract_dir}", str(archive_path), "-y"],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
                 text=True,
+                startupinfo=startupinfo,
+                creationflags=creationflags,
             )
             if result.returncode == 0:
                 return True
@@ -193,6 +202,12 @@ def install_archive_into_game(game_dir, archive_path, logger=None):
         return True, copied
 
 
+def install_one_archive_worker(game_dir, archive_path, logger=None):
+    safe_print(f"  [ARCHIVE] {Path(archive_path).name}", logger)
+    ok, copied = install_archive_into_game(game_dir, archive_path, logger)
+    return Path(archive_path).name, ok, copied
+
+
 # --- MANAGER LOGIC ---
 
 def manager_list(game_dir, mods_dir=None, logger=None):
@@ -221,7 +236,7 @@ def manager_list(game_dir, mods_dir=None, logger=None):
     return installed
 
 
-def manager_install_item(game_dir, mods_dir, item_name, logger=None):
+def manager_install_item(game_dir, mods_dir, item_name, workers=DEFAULT_MANAGER_WORKERS, logger=None):
     gp = Path(game_dir)
     md = Path(mods_dir)
     if not gp.is_dir():
@@ -257,14 +272,30 @@ def manager_install_item(game_dir, mods_dir, item_name, logger=None):
 
     safe_print(f"Installing {install_id} into {gp}...", logger)
     all_copied = []
+    workers = max(1, int(workers))
+    effective_workers = min(workers, len(archives))
+    safe_print(f"Install workers: requested={workers}, effective={effective_workers}", logger)
 
-    for archive in archives:
-        safe_print(f"  [ARCHIVE] {archive.name}", logger)
-        ok, copied = install_archive_into_game(gp, archive, logger)
-        if not ok:
-            safe_print(f"  [FAILED] Could not extract {archive.name}", logger)
-            return False
-        all_copied.extend(copied)
+    if len(archives) == 1 or effective_workers == 1:
+        for archive in archives:
+            safe_print(f"  [ARCHIVE] {archive.name}", logger)
+            ok, copied = install_archive_into_game(gp, archive, logger)
+            if not ok:
+                safe_print(f"  [FAILED] Could not extract {archive.name}", logger)
+                return False
+            all_copied.extend(copied)
+    else:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=effective_workers) as exe:
+            futures = {
+                exe.submit(install_one_archive_worker, gp, archive, logger): archive.name for archive in archives
+            }
+            for fut in concurrent.futures.as_completed(futures):
+                archive_name, ok, copied = fut.result()
+                if not ok:
+                    safe_print(f"  [FAILED] Could not extract {archive_name}", logger)
+                    return False
+                safe_print(f"  [DONE] {archive_name} ({len(copied)} files)", logger)
+                all_copied.extend(copied)
 
     unique_files = sorted(set(all_copied))
 
@@ -477,7 +508,13 @@ if UI_AVAILABLE:
             elif self.mode == "uninstall_template":
                 run_uninstall(self.params["p"], self.params["m"], self)
             elif self.mode == "manager_install":
-                manager_install_item(self.params["g"], self.params["d"], self.params["item"], self)
+                manager_install_item(
+                    self.params["g"],
+                    self.params["d"],
+                    self.params["item"],
+                    self.params.get("w", DEFAULT_MANAGER_WORKERS),
+                    self,
+                )
             elif self.mode == "manager_uninstall":
                 manager_uninstall_item(self.params["g"], self.params["id"], self)
             elif self.mode == "manager_wipe":
@@ -513,6 +550,14 @@ if UI_AVAILABLE:
 
             self.mgr_game_edit = self.add_path_row(m_layout, "Game Folder:")
             self.mgr_mods_edit = self.add_path_row(m_layout, "Download Folder:")
+            mgr_w_layout = QHBoxLayout()
+            mgr_w_layout.addWidget(QLabel("Install Workers:"))
+            self.mgr_worker_spin = QSpinBox()
+            self.mgr_worker_spin.setMinimum(1)
+            self.mgr_worker_spin.setMaximum(64)
+            self.mgr_worker_spin.setValue(DEFAULT_MANAGER_WORKERS)
+            mgr_w_layout.addWidget(self.mgr_worker_spin)
+            m_layout.addLayout(mgr_w_layout)
 
             list_row = QHBoxLayout()
             left = QVBoxLayout()
@@ -669,7 +714,10 @@ if UI_AVAILABLE:
                 QMessageBox.warning(self, "Missing Selection", "Select a mod or pack to install.")
                 return
             item_name = selected.data(Qt.UserRole)
-            self.run_thread("manager_install", {"g": game, "d": mods_dir, "item": item_name})
+            self.run_thread(
+                "manager_install",
+                {"g": game, "d": mods_dir, "item": item_name, "w": self.mgr_worker_spin.value()},
+            )
 
         def start_manager_uninstall(self):
             game = self.mgr_game_edit.text().strip()
@@ -749,6 +797,13 @@ def build_parser():
     ins_parser.add_argument("-g", "--game", required=True, help="Path to Cyberpunk 2077 game folder.")
     ins_parser.add_argument("-d", "--downloads", required=True, help="Path to downloaded mods/modpacks folder.")
     ins_parser.add_argument("-n", "--name", required=True, help="File or directory name inside downloads folder.")
+    ins_parser.add_argument(
+        "-w",
+        "--workers",
+        type=int,
+        default=DEFAULT_MANAGER_WORKERS,
+        help=f"Concurrent zip installers for pack installs (default: {DEFAULT_MANAGER_WORKERS}).",
+    )
 
     uins_parser = subparsers.add_parser("manager-uninstall", help="Uninstall one tracked mod/pack by id.")
     uins_parser.add_argument("-g", "--game", required=True, help="Path to Cyberpunk 2077 game folder.")
@@ -787,7 +842,7 @@ def main():
     elif args.command == "manager-list":
         manager_list(args.game, args.downloads)
     elif args.command == "manager-install":
-        manager_install_item(args.game, args.downloads, args.name)
+        manager_install_item(args.game, args.downloads, args.name, args.workers)
     elif args.command == "manager-uninstall":
         manager_uninstall_item(args.game, args.id)
     elif args.command == "manager-wipe":

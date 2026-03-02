@@ -42,6 +42,7 @@ Main window tab is **Mod Manager**:
 2. Set **Download Folder** (contains `.zip` mods and/or pack folders).
 3. Click **Refresh Lists**.
 4. Select available item and click **Install Selected**.
+   Use **Install Workers** to control parallel zip extraction for large packs.
 5. Select installed item and click **Uninstall Selected**.
 6. Click **Wipe All Mods** to clear known mod folders and reset `mods.json`.
 
@@ -92,6 +93,7 @@ Install one mod zip or one pack folder by name:
 ```bash
 python main.py manager-install -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads" -n "M3 GTR-9871-1-03-1697184904.zip"
 python main.py manager-install -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads" -n "2.31FemaleCreatorRomanceEnhance"
+python main.py manager-install -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads" -n "2.31FemaleCreatorRomanceEnhance" -w 16
 ```
 
 Uninstall one tracked install by id:
