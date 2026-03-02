@@ -381,6 +381,34 @@ def manager_uninstall_item(game_dir, install_id, logger=None):
     return True
 
 
+def manager_reinstall_item(game_dir, install_id, workers=DEFAULT_MANAGER_WORKERS, logger=None):
+    gp = Path(game_dir)
+    if not gp.is_dir():
+        safe_print(f"[ERROR] Invalid game folder: {gp}", logger)
+        return False
+
+    state = load_state(gp)
+    entry = next((e for e in state.get("installed", []) if e.get("id") == install_id), None)
+    if not entry:
+        safe_print(f"[ERROR] Install id not found: {install_id}", logger)
+        return False
+
+    source = Path(entry.get("source", ""))
+    if not source.exists():
+        safe_print(
+            f"[ERROR] Original source path missing for reinstall: {source}. "
+            f"Restore it or reinstall manually from downloads.",
+            logger,
+        )
+        return False
+
+    safe_print(f"Reinstalling {install_id}...", logger)
+    if not manager_uninstall_item(gp, install_id, logger):
+        return False
+
+    return manager_install_item(gp, source.parent, source.name, workers, logger)
+
+
 def manager_wipe_all(game_path, logger=None):
     run_clear(game_path, logger)
     gp = Path(game_path)
@@ -515,6 +543,13 @@ if UI_AVAILABLE:
                     self.params.get("w", DEFAULT_MANAGER_WORKERS),
                     self,
                 )
+            elif self.mode == "manager_reinstall":
+                manager_reinstall_item(
+                    self.params["g"],
+                    self.params["id"],
+                    self.params.get("w", DEFAULT_MANAGER_WORKERS),
+                    self,
+                )
             elif self.mode == "manager_uninstall":
                 manager_uninstall_item(self.params["g"], self.params["id"], self)
             elif self.mode == "manager_wipe":
@@ -543,7 +578,8 @@ if UI_AVAILABLE:
             info = QLabel(
                 "Main workflow: set your game folder and download folder, then install single mods (.zip) or"
                 " mod packs (folder that contains .zip files at root). Installed items are tracked in"
-                " mods.json in your game folder for safe uninstall and wipe operations."
+                " mods.json in your game folder for safe uninstall and wipe operations. Tip: selecting an"
+                " installed item and clicking Install runs a reinstall/repair."
             )
             info.setWordWrap(True)
             m_layout.addWidget(info)
@@ -709,14 +745,28 @@ if UI_AVAILABLE:
         def start_manager_install(self):
             game = self.mgr_game_edit.text().strip()
             mods_dir = self.mgr_mods_edit.text().strip()
-            selected = self.available_list.currentItem()
-            if not selected:
-                QMessageBox.warning(self, "Missing Selection", "Select a mod or pack to install.")
+            selected_available = self.available_list.currentItem()
+            if selected_available:
+                item_name = selected_available.data(Qt.UserRole)
+                self.run_thread(
+                    "manager_install",
+                    {"g": game, "d": mods_dir, "item": item_name, "w": self.mgr_worker_spin.value()},
+                )
                 return
-            item_name = selected.data(Qt.UserRole)
-            self.run_thread(
-                "manager_install",
-                {"g": game, "d": mods_dir, "item": item_name, "w": self.mgr_worker_spin.value()},
+
+            selected_installed = self.installed_list.currentItem()
+            if selected_installed:
+                install_id = selected_installed.data(Qt.UserRole)
+                self.run_thread(
+                    "manager_reinstall",
+                    {"g": game, "id": install_id, "w": self.mgr_worker_spin.value()},
+                )
+                return
+
+            QMessageBox.warning(
+                self,
+                "Missing Selection",
+                "Select a mod/pack from Available to install, or an entry from Installed to reinstall/repair.",
             )
 
         def start_manager_uninstall(self):
