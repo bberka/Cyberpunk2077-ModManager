@@ -252,4 +252,4 @@ Workflow file:
 
 ## License
 
-Add your preferred license file (`LICENSE`) before publishing publicly.
+This project is licensed under the MIT License. See `LICENSE` for details.
