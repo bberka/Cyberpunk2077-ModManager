@@ -226,6 +226,18 @@ Targets:
 
 Build outputs are in `dist/`.
 
+### Raw Python release zip
+
+Release automation also creates a portable raw Python package zip:
+
+- `cp77mod-python-<version>.zip`
+
+Contents include:
+
+- core Python scripts (`main.py`, `cli_entry.py`, `gui_entry.py`)
+- `README.md`, `LICENSE`, `VERSION`, `requirements.txt`
+- Windows launchers: `run-cli.bat`, `run-gui.bat`
+
 ## Release automation
 
 - Project version is defined in `VERSION` (example: `1.0.0`)

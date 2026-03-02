@@ -57,6 +57,12 @@ jobs:
           python -m PyInstaller --noconfirm --clean --onefile --name cp77mod-cli cli_entry.py
           python -m PyInstaller --noconfirm --clean --windowed --onefile --name cp77mod-gui gui_entry.py
 
+      - name: Build raw Python package zip
+        if: steps.tagcheck.outputs.exists == 'false'
+        shell: pwsh
+        run: |
+          ./scripts/package-python-release.ps1 -Version "${{ steps.version.outputs.version }}"
+
       - name: Create and push tag
         if: steps.tagcheck.outputs.exists == 'false'
         shell: bash
@@ -75,4 +81,5 @@ jobs:
           files: |
             dist/cp77mod-cli.exe
             dist/cp77mod-gui.exe
+            dist/cp77mod-python-${{ steps.version.outputs.version }}.zip
           generate_release_notes: true
