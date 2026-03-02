@@ -1,34 +1,78 @@
-# Cyberpunk 2077 Mod Manager (CLI + GUI)
+# CP77 Mod CLI / GUI Manager
 
-This project now includes a full mod manager on top of the existing extractor logic.
+A Windows-first Cyberpunk 2077 mod utility with both a command-line interface and a desktop GUI.
 
-## What it does
+This project helps you:
 
-- Keeps existing extraction workflow (download folder -> structured output folder).
-- Adds a manager workflow for direct install/uninstall into your game folder.
-- Supports:
-  - Single mod archives: `.zip` files such as `M3 GTR-9871-1-03-1697184904.zip`
-  - Mod packs: folders where zip files are in the pack root (example: `2.31FemaleCreatorRomanceEnhance/*.zip`)
-- Tracks installed files in `mods.json` at your game root.
-- Supports uninstall by tracked item and full wipe/reset.
+- Install single mod archives (`.zip`) directly into the game folder
+- Install large mod packs (folder containing many root-level `.zip` files)
+- Track exactly what was installed in `mods.json`
+- Uninstall individual installed entries safely
+- Wipe all tracked mod files reliably
+- Keep a legacy extractor workflow for staging/organizing loose downloads
+
+The core design goal is safe, repeatable mod management with traceable installs.
+
+## Why this project exists
+
+Cyberpunk mods are often packaged inconsistently. Some archives include game-root folders (`archive`, `r6`, `bin`, etc.), others contain loose files.
+
+This tool normalizes installation behavior and records installed file ownership in `mods.json`, so removal and repair are deterministic instead of manual guesswork.
+
+## Key Features
+
+- Mod Manager (primary workflow):
+  - Install from a download directory
+  - Single-click install/uninstall/wipe
+  - Reinstall/repair installed entries
+  - Parallel install workers for large packs
+- Safe tracking:
+  - Writes `mods.json` in game root
+  - Tracks installed entries and per-file ownership
+- Legacy tools (kept intentionally):
+  - `extract`: archive-to-structured-output workflow
+  - `uninstall`: template-based removal from extracted folders
+  - `clear`: folder-based legacy wipe
+- GUI + CLI parity for manager operations
+
+## Supported Input Layout
+
+### Single mod archive
+
+Example file in your downloads folder:
+
+`M3 GTR-9871-1-03-1697184904.zip`
+
+### Mod pack directory
+
+Example folder in downloads:
+
+`2.31FemaleCreatorRomanceEnhance/`
+
+Inside that folder, zip files are expected at the folder root:
+
+- `.../2.31FemaleCreatorRomanceEnhance/modA.zip`
+- `.../2.31FemaleCreatorRomanceEnhance/modB.zip`
+- etc.
 
 ## Requirements
 
-1. Python 3.8+
-2. Optional: 7-Zip at `C:\Program Files\7-Zip\7z.exe` (falls back to Python zip extraction)
-3. Optional GUI dependency:
+- Python 3.8+
+- Windows (primary target)
+- Optional, recommended: 7-Zip installed at:
+  - `C:\Program Files\7-Zip\7z.exe`
+- GUI dependency:
+  - `PySide6`
+- Build dependency:
+  - `pyinstaller`
+
+Install dependencies:
 
 ```bash
-pip install PySide6
+pip install -r requirements.txt
 ```
 
-For building executables:
-
-```bash
-pip install pyinstaller
-```
-
-## GUI Usage
+## Quick Start (GUI)
 
 Run:
 
@@ -36,23 +80,30 @@ Run:
 python main.py ui
 ```
 
-Main window tab is **Mod Manager**:
+In **Mod Manager** tab:
 
-1. Set **Game Folder** (Cyberpunk root).
-2. Set **Download Folder** (contains `.zip` mods and/or pack folders).
-3. Click **Refresh Lists**.
-4. Select available item and click **Install Selected**.
-   Use **Install Workers** to control parallel zip extraction for large packs.
-5. Select installed item and click **Uninstall Selected**.
-6. Click **Wipe All Mods** to delete files tracked in `mods.json` and reset state.
+1. Set **Game Folder** (Cyberpunk 2077 root)
+2. Set **Download Folder** (mods + packs location)
+3. Click **Refresh Lists**
+4. Select an item and click **Install Selected**
+5. To repair/reinstall, select from **Installed** and click **Install Selected**
+6. Use **Uninstall Selected** for one installed entry
+7. Use **Wipe All Mods** to delete tracked files from `mods.json`
 
-Legacy tabs are still available:
+### GUI note
 
-- **Extract Mods**
-- **Uninstall From Template**
-- **Wipe (Legacy Clear)**
+`Install Selected` has two behaviors:
+
+- If **Available** selection exists: performs install
+- Else if **Installed** selection exists: performs reinstall/repair
 
 ## CLI Usage
+
+### Show help
+
+```bash
+python main.py -h
+```
 
 ### Launch GUI
 
@@ -60,67 +111,95 @@ Legacy tabs are still available:
 python main.py ui
 ```
 
-(also supports `python main.py gui`)
+(also `python main.py gui`)
 
-### Legacy extractor
-
-```bash
-python main.py extract -i "C:\Mods\Downloads" -o "C:\Mods\Extracted" -w 4
-```
-
-### Legacy template uninstall
-
-```bash
-python main.py uninstall -p "C:\Games\Cyberpunk 2077" -m "C:\Mods\ExtractedPack"
-```
-
-### Legacy clear (folder-based)
-
-```bash
-python main.py clear -p "C:\Games\Cyberpunk 2077"
-```
-
-### Manager commands
-
-List tracked installs and optionally available downloads:
+### Manager: list
 
 ```bash
 python main.py manager-list -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads"
 ```
 
-Install one mod zip or one pack folder by name:
+### Manager: install
+
+Install a single archive:
 
 ```bash
 python main.py manager-install -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads" -n "M3 GTR-9871-1-03-1697184904.zip"
+```
+
+Install a pack folder:
+
+```bash
 python main.py manager-install -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads" -n "2.31FemaleCreatorRomanceEnhance"
+```
+
+Install with parallel workers for large packs:
+
+```bash
 python main.py manager-install -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads" -n "2.31FemaleCreatorRomanceEnhance" -w 16
 ```
 
-Uninstall one tracked install by id:
+### Manager: uninstall one tracked entry
 
 ```bash
-python main.py manager-uninstall -g "C:\Games\Cyberpunk 2077" -i "mod:M3 GTR-9871-1-03-1697184904.zip"
 python main.py manager-uninstall -g "C:\Games\Cyberpunk 2077" -i "pack:2.31FemaleCreatorRomanceEnhance"
 ```
 
-Wipe tracked files and reset state:
+Example single-mod id:
+
+`mod:M3 GTR-9871-1-03-1697184904.zip`
+
+### Manager: wipe tracked installs
 
 ```bash
 python main.py manager-wipe -g "C:\Games\Cyberpunk 2077"
 ```
 
-## State file
+This deletes files tracked in `mods.json` and resets state.
 
-The manager writes `mods.json` in the game root with:
+## Legacy Commands (still available)
 
-- Installed entries (`id`, type, source, archive list, tracked files)
-- File ownership map so uninstall can avoid deleting files still owned by another installed item
+These are preserved for users who rely on old workflows.
 
-`manager-wipe` uses this file list to remove tracked files instead of deleting predetermined folders.
+### Extract and normalize downloads
 
-## Build two EXEs
+```bash
+python main.py extract -i "C:\Mods\Downloads" -o "C:\Mods\Extracted" -w 4
+```
 
-### PowerShell script
+### Template-based uninstall
+
+```bash
+python main.py uninstall -p "C:\Games\Cyberpunk 2077" -m "C:\Mods\ExtractedPack"
+```
+
+### Folder-based legacy clear
+
+```bash
+python main.py clear -p "C:\Games\Cyberpunk 2077"
+```
+
+## `mods.json` state model
+
+`mods.json` is stored at the game root and contains:
+
+- `installed`: list of installed entries
+  - id (`mod:...` or `pack:...`)
+  - source path
+  - archive names
+  - tracked file list
+- `file_owners`: map of relative game paths -> owning install ids
+
+This ownership map is used to avoid deleting files still used by another installed entry.
+
+## Build EXE files
+
+Two standalone executables are supported:
+
+- `cp77mod-cli.exe`
+- `cp77mod-gui.exe`
+
+### PowerShell
 
 ```powershell
 ./scripts/build.ps1 -All
@@ -145,7 +224,32 @@ Targets:
 - `build-all`
 - `clean`
 
-Output binaries are in `dist/`:
+Build outputs are in `dist/`.
 
-- `cp77mod-cli.exe`
-- `cp77mod-gui.exe`
+## Release automation
+
+- Project version is defined in `VERSION` (example: `1.0.0`)
+- GitHub workflow on push:
+  - reads `VERSION`
+  - checks if tag already exists
+  - if tag exists: does nothing
+  - if tag does not exist: builds both EXEs and creates release
+
+Workflow file:
+
+`.github/workflows/release.yml`
+
+## Troubleshooting
+
+- GUI does not launch:
+  - install `PySide6` via `pip install -r requirements.txt`
+- Slow pack install:
+  - increase `-w` in CLI or **Install Workers** in GUI
+- Missing source path during reinstall:
+  - reinstall from downloads manually so source can be tracked again
+- 7-Zip not found:
+  - Python zip fallback is used; install 7-Zip for best compatibility/performance
+
+## License
+
+Add your preferred license file (`LICENSE`) before publishing publicly.
