@@ -65,8 +65,6 @@ Inside that folder, zip files are expected at the folder root:
   - `C:\Program Files\7-Zip\7z.exe`
 - GUI dependency:
   - `PySide6`
-- Build dependency:
-  - `pyinstaller`
 
 Install dependencies:
 
@@ -194,43 +192,9 @@ python main.py clear -p "C:\Games\Cyberpunk 2077"
 
 This ownership map is used to avoid deleting files still used by another installed entry.
 
-## Build EXE files
+## Raw Python release zip
 
-Two standalone executables are supported:
-
-- `cp77mm-cli.exe`
-- `cp77mm-gui.exe`
-
-### PowerShell
-
-```powershell
-./scripts/build.ps1 -All
-```
-
-Options:
-
-- `-Cli`
-- `-Gui`
-- `-All`
-
-### Makefile
-
-```bash
-make build-all
-```
-
-Targets:
-
-- `build-cli`
-- `build-gui`
-- `build-all`
-- `clean`
-
-Build outputs are in `dist/`.
-
-### Raw Python release zip
-
-Release automation also creates a portable raw Python package zip:
+Release automation creates a portable raw Python package zip:
 
 - `cp77mm-python-<version>.zip`
 
@@ -240,6 +204,18 @@ Contents include:
 - `README.md`, `LICENSE`, `VERSION`, `requirements.txt`
 - Windows launchers: `run-cli.bat`, `run-gui.bat`
 
+### Makefile
+
+```bash
+make release
+```
+
+Targets:
+
+- `package-python`
+- `release`
+- `clean`
+
 ## Release automation
 
 - Project version is defined in `VERSION` (example: `1.0.0`)
@@ -247,7 +223,7 @@ Contents include:
   - reads `VERSION`
   - checks if tag already exists
   - if tag exists: does nothing
-  - if tag does not exist: builds both EXEs and creates release
+  - if tag does not exist: builds raw Python zip and creates release
 
 Workflow file:
 

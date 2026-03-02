@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   release:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
@@ -40,24 +40,6 @@ jobs:
             echo "Tag does not exist. Build/release will run."
           fi
 
-      - name: Setup Python
-        if: steps.tagcheck.outputs.exists == 'false'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        if: steps.tagcheck.outputs.exists == 'false'
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Build CLI and GUI executables
-        if: steps.tagcheck.outputs.exists == 'false'
-        run: |
-          python -m PyInstaller --noconfirm --clean --onefile --name cp77mm-cli cli_entry.py
-          python -m PyInstaller --noconfirm --clean --windowed --onefile --name cp77mm-gui gui_entry.py
-
       - name: Build raw Python package zip
         if: steps.tagcheck.outputs.exists == 'false'
         shell: pwsh
@@ -80,7 +62,5 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           name: v${{ steps.version.outputs.version }}
           files: |
-            dist/cp77mm-cli.exe
-            dist/cp77mm-gui.exe
             dist/cp77mm-python-${{ steps.version.outputs.version }}.zip
           generate_release_notes: true
