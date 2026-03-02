@@ -1,85 +1,147 @@
-# Cyberpunk 2077 Mod Manager
+# Cyberpunk 2077 Mod Manager (CLI + GUI)
 
-A lightweight, concurrent Python utility designed to extract, organize, install, and cleanly remove Cyberpunk 2077 mods. It handles poorly packaged mods by strictly enforcing the official game folder structure and provides both a Command Line Interface (CLI) and a Graphical User Interface (GUI).
+This project now includes a full mod manager on top of the existing extractor logic.
 
-## Features
+## What it does
 
-- **Smart Extraction:** Automatically routes `.archive`, `.xl`, and core mod folders (`bin`, `r6`, `red4ext`, etc.) to their proper subdirectories, keeping your staging area clean.
-- **Concurrent Processing:** Uses multi-threading to extract multiple heavy mod archives simultaneously.
-- **Targeted Uninstaller:** Removes specific mod files from your game directory based on an extracted mod pack template without touching vanilla files.
-- **Nuclear Clear:** Safely wipes all known mod framework folders and files from your game directory to restore a vanilla state.
-- **GUI Mode:** Includes a PySide6-powered graphical interface for ease of use.
+- Keeps existing extraction workflow (download folder -> structured output folder).
+- Adds a manager workflow for direct install/uninstall into your game folder.
+- Supports:
+  - Single mod archives: `.zip` files such as `M3 GTR-9871-1-03-1697184904.zip`
+  - Mod packs: folders where zip files are in the pack root (example: `2.31FemaleCreatorRomanceEnhance/*.zip`)
+- Tracks installed files in `mods.json` at your game root.
+- Supports uninstall by tracked item and full wipe/reset.
 
-## Prerequisites
+## Requirements
 
-1. **Python 3.7+**
-2. **7-Zip:** Must be installed at the default Windows directory: `C:\Program Files\7-Zip\7z.exe`
-3. **PySide6 (Optional):** Only required if you want to use the GUI.
+1. Python 3.8+
+2. Optional: 7-Zip at `C:\Program Files\7-Zip\7z.exe` (falls back to Python zip extraction)
+3. Optional GUI dependency:
 
 ```bash
 pip install PySide6
-
 ```
 
-## CLI Usage
-
-Run the script from your terminal or command prompt. The tool is split into four main commands: `extract`, `uninstall`, `clear`, and `ui`.
-
-### 1. Extract and Organize Mods
-
-Takes a folder full of downloaded mod files (zips, rars, 7z) and extracts them into a perfectly structured copy-paste ready folder.
+For building executables:
 
 ```bash
-python script.py extract -i "C:\Path\To\Downloads" -o "C:\Path\To\ExtractedMods" -w 4
-
+pip install pyinstaller
 ```
-
-- `-i` or `--input`: The folder containing your downloaded mod archives.
-- `-o` or `--output`: The destination folder where the structured files will be dumped.
-- `-w` or `--workers`: (Optional) The number of concurrent extractions to run. Default is 3.
-
-### 2. Uninstall Specific Mods
-
-Safely removes a specific mod pack from your game directory. It compares the files inside your extracted mod folder and deletes the exact matches from the game folder.
-
-```bash
-python script.py uninstall -p "C:\Path\To\Cyberpunk 2077" -m "C:\Path\To\ExtractedMods"
-
-```
-
-- `-p` or `--path`: Your main Cyberpunk 2077 game directory.
-- `-m` or `--modpack`: The folder containing the extracted, correctly structured mod files you want to remove.
-
-### 3. Clear All Mods (Wipe)
-
-Wipes all known mod folders (`red4ext`, `mods`, custom `archive/pc/mod` files, `r6/scripts`, CET plugins, etc.) to reset the game to a near-vanilla state.
-
-```bash
-python script.py clear -p "C:\Path\To\Cyberpunk 2077"
-
-```
-
-- `-p` or `--path`: Your main Cyberpunk 2077 game directory.
-- _Note: It will prompt you for a `y/n` confirmation before deleting._
 
 ## GUI Usage
 
-If you prefer not to use the command line, you can launch the graphical interface.
+Run:
 
 ```bash
-python script.py ui
-
+python main.py ui
 ```
 
-This opens a window with three tabs:
+Main window tab is **Mod Manager**:
 
-1. **Extract Mods:** Select your input/output folders and worker count.
-2. **Uninstall Mod Pack:** Select your game folder and the extracted mod folder to perform a targeted cleanup.
-3. **Wipe All Mods:** Select your game folder to nuke all mod files.
+1. Set **Game Folder** (Cyberpunk root).
+2. Set **Download Folder** (contains `.zip` mods and/or pack folders).
+3. Click **Refresh Lists**.
+4. Select available item and click **Install Selected**.
+5. Select installed item and click **Uninstall Selected**.
+6. Click **Wipe All Mods** to clear known mod folders and reset `mods.json`.
 
-All console output and progress will be displayed safely in the built-in log window.
+Legacy tabs are still available:
 
-## Troubleshooting
+- **Extract Mods**
+- **Uninstall From Template**
+- **Wipe (Legacy Clear)**
 
-- **Extraction fails constantly:** Ensure 7-Zip is installed exactly at `C:\Program Files\7-Zip\7z.exe`. If it is installed elsewhere, open `script.py` in a text editor and change the `SEVEN_ZIP_EXE` variable at the top of the file to match your path.
-- **GUI won't launch:** Ensure you have installed the UI framework by running `pip install PySide6`.
+## CLI Usage
+
+### Launch GUI
+
+```bash
+python main.py ui
+```
+
+(also supports `python main.py gui`)
+
+### Legacy extractor
+
+```bash
+python main.py extract -i "C:\Mods\Downloads" -o "C:\Mods\Extracted" -w 4
+```
+
+### Legacy template uninstall
+
+```bash
+python main.py uninstall -p "C:\Games\Cyberpunk 2077" -m "C:\Mods\ExtractedPack"
+```
+
+### Legacy clear
+
+```bash
+python main.py clear -p "C:\Games\Cyberpunk 2077"
+```
+
+### Manager commands
+
+List tracked installs and optionally available downloads:
+
+```bash
+python main.py manager-list -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads"
+```
+
+Install one mod zip or one pack folder by name:
+
+```bash
+python main.py manager-install -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads" -n "M3 GTR-9871-1-03-1697184904.zip"
+python main.py manager-install -g "C:\Games\Cyberpunk 2077" -d "C:\Mods\Downloads" -n "2.31FemaleCreatorRomanceEnhance"
+```
+
+Uninstall one tracked install by id:
+
+```bash
+python main.py manager-uninstall -g "C:\Games\Cyberpunk 2077" -i "mod:M3 GTR-9871-1-03-1697184904.zip"
+python main.py manager-uninstall -g "C:\Games\Cyberpunk 2077" -i "pack:2.31FemaleCreatorRomanceEnhance"
+```
+
+Wipe and reset state:
+
+```bash
+python main.py manager-wipe -g "C:\Games\Cyberpunk 2077"
+```
+
+## State file
+
+The manager writes `mods.json` in the game root with:
+
+- Installed entries (`id`, type, source, archive list, tracked files)
+- File ownership map so uninstall can avoid deleting files still owned by another installed item
+
+## Build two EXEs
+
+### PowerShell script
+
+```powershell
+./scripts/build.ps1 -All
+```
+
+Options:
+
+- `-Cli`
+- `-Gui`
+- `-All`
+
+### Makefile
+
+```bash
+make build-all
+```
+
+Targets:
+
+- `build-cli`
+- `build-gui`
+- `build-all`
+- `clean`
+
+Output binaries are in `dist/`:
+
+- `cp77mod-cli.exe`
+- `cp77mod-gui.exe`
