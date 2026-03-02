@@ -44,7 +44,7 @@ Main window tab is **Mod Manager**:
 4. Select available item and click **Install Selected**.
    Use **Install Workers** to control parallel zip extraction for large packs.
 5. Select installed item and click **Uninstall Selected**.
-6. Click **Wipe All Mods** to clear known mod folders and reset `mods.json`.
+6. Click **Wipe All Mods** to delete files tracked in `mods.json` and reset state.
 
 Legacy tabs are still available:
 
@@ -74,7 +74,7 @@ python main.py extract -i "C:\Mods\Downloads" -o "C:\Mods\Extracted" -w 4
 python main.py uninstall -p "C:\Games\Cyberpunk 2077" -m "C:\Mods\ExtractedPack"
 ```
 
-### Legacy clear
+### Legacy clear (folder-based)
 
 ```bash
 python main.py clear -p "C:\Games\Cyberpunk 2077"
@@ -103,7 +103,7 @@ python main.py manager-uninstall -g "C:\Games\Cyberpunk 2077" -i "mod:M3 GTR-987
 python main.py manager-uninstall -g "C:\Games\Cyberpunk 2077" -i "pack:2.31FemaleCreatorRomanceEnhance"
 ```
 
-Wipe and reset state:
+Wipe tracked files and reset state:
 
 ```bash
 python main.py manager-wipe -g "C:\Games\Cyberpunk 2077"
@@ -115,6 +115,8 @@ The manager writes `mods.json` in the game root with:
 
 - Installed entries (`id`, type, source, archive list, tracked files)
 - File ownership map so uninstall can avoid deleting files still owned by another installed item
+
+`manager-wipe` uses this file list to remove tracked files instead of deleting predetermined folders.
 
 ## Build two EXEs
 

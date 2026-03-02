@@ -410,10 +410,31 @@ def manager_reinstall_item(game_dir, install_id, workers=DEFAULT_MANAGER_WORKERS
 
 
 def manager_wipe_all(game_path, logger=None):
-    run_clear(game_path, logger)
     gp = Path(game_path)
+    if not gp.is_dir():
+        safe_print(f"[ERROR] Invalid game folder: {gp}", logger)
+        return False
+
+    state = load_state(gp)
+    owners = state.get("file_owners", {})
+    tracked_files = sorted(owners.keys())
+    removed_files = 0
+
+    safe_print(f"Wiping tracked mod files from state: {len(tracked_files)} entries", logger)
+    for rel in tracked_files:
+        target = gp / Path(rel)
+        if target.exists() and target.is_file():
+            try:
+                target.unlink()
+                removed_files += 1
+                safe_print(f"  [REMOVED] {rel}", logger)
+                remove_empty_parents(target.parent, gp)
+            except Exception as e:
+                safe_print(f"  [ERROR] Could not remove {rel}: {e}", logger)
+
     save_state(gp, empty_state())
-    safe_print(f"State reset: {get_state_path(gp)}", logger)
+    safe_print(f"Wipe complete: deleted={removed_files}, state reset={get_state_path(gp)}", logger)
+    return True
 
 
 # --- EXISTING COMMAND HANDLERS (PRESERVED) ---
