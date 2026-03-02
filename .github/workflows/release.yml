@@ -54,8 +54,8 @@ jobs:
       - name: Build CLI and GUI executables
         if: steps.tagcheck.outputs.exists == 'false'
         run: |
-          python -m PyInstaller --noconfirm --clean --onefile --name cp77mod-cli cli_entry.py
-          python -m PyInstaller --noconfirm --clean --windowed --onefile --name cp77mod-gui gui_entry.py
+          python -m PyInstaller --noconfirm --clean --onefile --name cp77mm-cli cli_entry.py
+          python -m PyInstaller --noconfirm --clean --windowed --onefile --name cp77mm-gui gui_entry.py
 
       - name: Build raw Python package zip
         if: steps.tagcheck.outputs.exists == 'false'
@@ -79,7 +79,7 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           name: v${{ steps.version.outputs.version }}
           files: |
-            dist/cp77mod-cli.exe
-            dist/cp77mod-gui.exe
-            dist/cp77mod-python-${{ steps.version.outputs.version }}.zip
+            dist/cp77mm-cli.exe
+            dist/cp77mm-gui.exe
+            dist/cp77mm-python-${{ steps.version.outputs.version }}.zip
           generate_release_notes: true

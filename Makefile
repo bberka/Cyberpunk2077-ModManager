@@ -3,10 +3,10 @@ PYTHON ?= python
 .PHONY: build-cli build-gui build-all clean
 
 build-cli:
-	$(PYTHON) -m PyInstaller --noconfirm --clean --onefile --name cp77mod-cli cli_entry.py
+	$(PYTHON) -m PyInstaller --noconfirm --clean --onefile --name cp77mm-cli cli_entry.py
 
 build-gui:
-	$(PYTHON) -m PyInstaller --noconfirm --clean --windowed --onefile --name cp77mod-gui gui_entry.py
+	$(PYTHON) -m PyInstaller --noconfirm --clean --windowed --onefile --name cp77mm-gui gui_entry.py
 
 build-all: build-cli build-gui
 

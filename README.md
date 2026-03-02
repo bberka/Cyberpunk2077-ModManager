@@ -1,4 +1,6 @@
-# CP77 Mod CLI / GUI Manager
+# Cyberpunk2077-ModManager
+
+Short name: `cp77mm`.
 
 A Windows-first Cyberpunk 2077 mod utility with both a command-line interface and a desktop GUI.
 
@@ -196,8 +198,8 @@ This ownership map is used to avoid deleting files still used by another install
 
 Two standalone executables are supported:
 
-- `cp77mod-cli.exe`
-- `cp77mod-gui.exe`
+- `cp77mm-cli.exe`
+- `cp77mm-gui.exe`
 
 ### PowerShell
 
@@ -230,7 +232,7 @@ Build outputs are in `dist/`.
 
 Release automation also creates a portable raw Python package zip:
 
-- `cp77mod-python-<version>.zip`
+- `cp77mm-python-<version>.zip`
 
 Contents include:
 

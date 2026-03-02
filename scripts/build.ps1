@@ -11,11 +11,11 @@ if (-not $Cli -and -not $Gui -and -not $All) {
 $ErrorActionPreference = "Stop"
 
 function Build-Cli {
-    python -m PyInstaller --noconfirm --clean --onefile --name cp77mod-cli cli_entry.py
+    python -m PyInstaller --noconfirm --clean --onefile --name cp77mm-cli cli_entry.py
 }
 
 function Build-Gui {
-    python -m PyInstaller --noconfirm --clean --windowed --onefile --name cp77mod-gui gui_entry.py
+    python -m PyInstaller --noconfirm --clean --windowed --onefile --name cp77mm-gui gui_entry.py
 }
 
 if ($All -or $Cli) { Build-Cli }

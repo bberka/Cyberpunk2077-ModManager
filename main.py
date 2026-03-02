@@ -581,7 +581,7 @@ if UI_AVAILABLE:
     class CyberModUI(QMainWindow):
         def __init__(self):
             super().__init__()
-            self.setWindowTitle("Cyberpunk 2077 Mod Manager")
+            self.setWindowTitle("Cyberpunk2077-ModManager")
             self.setMinimumSize(900, 620)
 
             central_widget = QWidget()

@@ -8,8 +8,8 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $distDir = Join-Path $repoRoot "dist"
 $stagingRoot = Join-Path $distDir "python-package"
-$packageDir = Join-Path $stagingRoot "cp77mod-python-$Version"
-$zipPath = Join-Path $distDir "cp77mod-python-$Version.zip"
+$packageDir = Join-Path $stagingRoot "cp77mm-python-$Version"
+$zipPath = Join-Path $distDir "cp77mm-python-$Version.zip"
 
 if (Test-Path $stagingRoot) {
     Remove-Item -Recurse -Force $stagingRoot
